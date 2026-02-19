@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from sqlmodel import SQLModel, Session, select
 from db import engine
 from models import User,UserCreate,UserLogin
-
+from auth import create_token
 app = FastAPI()
 
 @app.on_event("startup")
@@ -19,7 +19,8 @@ async def root():
 def signup(user: UserCreate):
 
     with Session(engine) as session:
-        statement = select(User).where(User.email==user.email)
+        email = user.email.lower().strip()
+        statement = select(User).where(User.email==email)
         existing_user = session.exec(statement).first()
 
         if existing_user:
@@ -40,11 +41,28 @@ def login(user: UserLogin ):
 
     with Session(engine) as session:
 
-        statement = select (User).where(User.email == user.email)
+        email = user.email.lower().strip()
+        statement = select (User).where(User.email == email)
         db_user = session.exec(statement).first()
         print(user.password)
         if not db_user or user.password != db_user.password:
             raise HTTPException(status_code = 400, detail = "Invalid credentials Mommy")
         
-        return {"Message" : "Login Successfull Mommy"}
+        access_token = create_token(db_user.id)
+        return {"Acess token ": access_token,
+                "status " :"Good shit baby" }
 
+from fastapi import Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from auth import verify_token
+
+security = HTTPBearer()
+
+@app.get("/profile")
+def profile(credentials : HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    payload = verify_token(token)
+
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return {"Message": "YOU ARE LOGGED IN !","user_id" : payload["sub"] }
