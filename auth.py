@@ -1,4 +1,4 @@
-from jose import jwt 
+from jose import jwt , JWTError
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -24,7 +24,7 @@ def create_token(user_id):
 
 def verify_token(token : str):
     try:
-        payload = jwt.decode(token, SECRET_KEY , ALGORITHM)
+        payload = jwt.decode(token, SECRET_KEY , algorithms = [ALGORITHM])
         return payload
-    except (JWTerror):
-        return NOne
+    except JWTError:
+        return None
