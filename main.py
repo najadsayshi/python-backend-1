@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import SQLModel, Session, select
 
 from db import engine
-from models import User, UserCreate, UserLogin
+from models import User, UserCreate, UserLogin, ItemCreate, Item, ItemUpdate
 from auth import create_token, verify_token
 
 app = FastAPI()
@@ -85,3 +85,81 @@ def profile(
         "message": "YOU ARE LOGGED IN!",
         "user_id": payload["sub"]
     }
+
+# getting user id whenever we want using jwt token
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security),
+                     db: Session = Depends(create_session)):
+    
+    token = credentials.credentials
+    
+    payload = verify_token(token)
+
+    if payload is None:
+        raise HTTPException(status_code = 401, detail = "Invalid or expired token")
+    
+    user_id = payload["sub"]
+
+    statement = select(User).where(User.id ==user_id)
+
+    user = db.exec(statement).first()
+
+    if not user:
+        raise HTTPException(status_code = 404, detail = "User not Found")
+    
+    return user
+
+
+
+
+@app.post("/items")
+def create_item(
+                    item : ItemCreate,
+                    db : Session = Depends(create_session),
+                    Current_user : User = Depends(get_current_user)
+                ):
+    
+    db_item = Item(
+        title = item.title,
+        description = item.description,
+        owner_id = Current_user.id
+    )
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    return db_item
+    
+
+@app.put("/items/{item_id}")
+
+def update_item(
+    item_id : int,
+    updated_item  : ItemUpdate,
+    db : Session = Depends(create_session),
+    current_user : User =  Depends(get_current_user),
+):
+    statement = select(Item).where(Item.id ==item_id)
+
+    db_item = db.exec(statement).first()
+
+    if not db_item:
+        raise HTTPException(status_code = 404,detail = "Item not found brother")
+    
+
+    if db_item.owner_id != current_user.id:
+        raise HTTPException(status_code = 403,detail = "Not authorized for you to do that")
+    
+    
+    db_item.title = updated_item.title
+    if updated_item.description is None:
+        db_item.description = db_item.description 
+    else:
+        db_item.description= updated_item.description
+    
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+
+    return db_item
+
+
+
