@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import SQLModel, Session, select
 
 from db import engine
-from models import User, UserCreate, UserLogin, ItemCreate, Item, ItemUpdate
+from models import User, UserCreate, UserLogin, ItemCreate, Item, ItemUpdate, UserRead
 from auth import create_token, verify_token
 
 app = FastAPI()
@@ -25,7 +25,7 @@ async def root():
     return {"message": "Hello world"}
 
 
-@app.post("/signup")
+@app.post("/signup", response_model=UserRead)
 def signup(user: UserCreate, db: Session = Depends(create_session)):
 
     email = user.email.lower().strip()
@@ -41,7 +41,6 @@ def signup(user: UserCreate, db: Session = Depends(create_session)):
         email=email,
         password=user.password  # (hash this if using hashing)
     )
-
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -148,8 +147,10 @@ def update_item(
     if db_item.owner_id != current_user.id:
         raise HTTPException(status_code = 403,detail = "Not authorized for you to do that")
     
+    if updated_item.title is not None:
+        db_item.title = updated_item.title
+
     
-    db_item.title = updated_item.title
     if updated_item.description is None:
         db_item.description = db_item.description 
     else:
