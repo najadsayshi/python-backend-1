@@ -8,12 +8,13 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM  = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-def create_token(user_id):
+def create_token(user_id, name):
 
     expire = datetime.utcnow() + timedelta(minutes = ACCESS_TOKEN_EXPIRE_MINUTES)
 
     payload = {
         "sub" : str(user_id),
+        "name" : str(name),
         "exp" : expire
     }
 

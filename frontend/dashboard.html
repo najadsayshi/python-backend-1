@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- PROFILE -->
+    <div class="card">
+        <div id="profileData"></div>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <!-- CREATE ITEM -->
+    <div class="card">
+        <h2>Create Item</h2>
+        <input id="title" placeholder="Title">
+        <input id="description" placeholder="Description">
+        <button onclick="createItem()">Create</button>
+    </div>
+
+    <!-- EDIT ITEM -->
+    <div class="card" id="editBox" style="display:none;">
+        <h2>Edit Item</h2>
+        <input id="editTitle">
+        <input id="editDescription">
+        <button id="saveEditBtn">Save</button>
+        <button onclick="closeEdit()">Cancel</button>
+    </div>
+
+    <!-- ITEMS LIST -->
+    <div class="card">
+        <h2>My Items</h2>
+        <ul id="itemsList"></ul>
+    </div>
+
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+// ================= TOKEN =================
+
+function getToken() {
+    return localStorage.getItem("token");
+}
+
+function logout() {
+    localStorage.removeItem("token");
+    window.location.href = "index.html";
+}
+
+// ================= PROFILE =================
+
+async function loadProfile() {
+
+    const token = getToken();
+
+    if (!token) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    const res = await fetch(API + "/profile", {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    });
+
+    if (res.status === 401) {
+        alert("Session expired. Please login again.");
+        logout();
+        return;
+    }
+
+    const data = await res.json();
+
+    document.getElementById("profileData").innerHTML =
+        `<h2>WELCOME ${data.name}</h2>`;
+}
+
+// ================= CREATE =================
+
+async function createItem() {
+
+    const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value.trim();
+
+    if (!title) {
+        alert("Title is required");
+        return;
+    }
+
+    const res = await fetch(API + "/items", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + getToken()
+        },
+        body: JSON.stringify({
+            title: title,
+            description: description
+        })
+    });
+
+    if (!res.ok) {
+        alert("Failed to create item");
+        return;
+    }
+
+    document.getElementById("title").value = "";
+    document.getElementById("description").value = "";
+
+    loadItems();
+}
+
+// ================= READ =================
+
+async function loadItems() {
+
+    const res = await fetch(API + "/items", {
+        headers: {
+            "Authorization": "Bearer " + getToken()
+        }
+    });
+
+    if (res.status === 401) {
+        alert("Session expired.");
+        logout();
+        return;
+    }
+
+    const items = await res.json();
+
+    if (!Array.isArray(items)) {
+        console.error("Expected array but got:", items);
+        return;
+    }
+
+    const list = document.getElementById("itemsList");
+    list.innerHTML = "";
+
+    items.forEach(item => {
+
+        const li = document.createElement("li");
+
+        const text = document.createElement("span");
+        text.innerText = `${item.title} - ${item.description}`;
+
+        const editBtn = document.createElement("button");
+        editBtn.innerText = "Edit";
+        editBtn.onclick = () => editItem(item);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.innerText = "Delete";
+        deleteBtn.onclick = () => deleteItem(item.id);
+
+        li.appendChild(text);
+        li.appendChild(editBtn);
+        li.appendChild(deleteBtn);
+
+        list.appendChild(li);
+    });
+}
+
+// ================= UPDATE =================
+
+function editItem(item) {
+
+    document.getElementById("editBox").style.display = "block";
+
+    document.getElementById("editTitle").value = item.title;
+    document.getElementById("editDescription").value = item.description;
+
+    document.getElementById("saveEditBtn").onclick = function () {
+        updateItem(item.id);
+    };
+}
+
+function closeEdit() {
+    document.getElementById("editBox").style.display = "none";
+}
+
+async function updateItem(id) {
+
+    const res = await fetch(API + "/items/" + id, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + getToken()
+        },
+        body: JSON.stringify({
+            title: document.getElementById("editTitle").value,
+            description: document.getElementById("editDescription").value
+        })
+    });
+
+    if (!res.ok) {
+        alert("Update failed");
+        return;
+    }
+
+    closeEdit();
+    loadItems();
+}
+
+// ================= DELETE =================
+
+async function deleteItem(id) {
+
+    const confirmDelete = confirm("Delete this item?");
+    if (!confirmDelete) return;
+
+    const res = await fetch(API + "/items/" + id, {
+        method: "DELETE",
+        headers: {
+            "Authorization": "Bearer " + getToken()
+        }
+    });
+
+    if (!res.ok) {
+        alert("Delete failed");
+        return;
+    }
+
+    loadItems();
+}
+
+// ================= INIT =================
+
+loadProfile();
+loadItems();
+
+</script>
+
+</body>
+</html>

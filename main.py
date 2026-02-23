@@ -8,6 +8,22 @@ from auth import create_token, verify_token
 
 app = FastAPI()
 
+#middleware - CORS
+from fastapi.middleware.cors import CORSMiddleware
+origins = [
+
+     
+    "http://localhost:8001",
+    "http://127.0.0.1:8001",
+ ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.on_event("startup")
 def on_startup():
@@ -59,7 +75,7 @@ def login(user: UserLogin, db: Session = Depends(create_session)):
     if not db_user or user.password != db_user.password:
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    access_token = create_token(db_user.id)
+    access_token = create_token(db_user.id,db_user.name)
 
     return {
         "access_token": access_token
@@ -82,7 +98,8 @@ def profile(
 
     return {
         "message": "YOU ARE LOGGED IN!",
-        "user_id": payload["sub"]
+        "user_id": payload["sub"],
+        "name" : payload["name"]
     }
 
 # getting user id whenever we want using jwt token
@@ -164,3 +181,32 @@ def update_item(
 
 
 
+@app.delete("/items/{item_id}")
+def delete_item(
+    item_id: int,
+    db: Session = Depends(create_session),
+    current_user: User = Depends(get_current_user),
+):
+    statement = select(Item).where(Item.id == item_id)
+    db_item = db.exec(statement).first()
+
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    if db_item.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    db.delete(db_item)
+    db.commit()
+
+    return {"message": "Item deleted"}
+
+
+@app.get("/items")
+def get_items(
+    db: Session = Depends(create_session),
+    current_user: User = Depends(get_current_user),
+):
+    statement = select(Item).where(Item.owner_id == current_user.id)
+    items = db.exec(statement).all()
+    return items

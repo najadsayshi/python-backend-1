@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>FastAPI Auth</h1>
+
+    <div class="card">
+        <h2>Signup</h2>
+        <input id="signupName" placeholder="Name">
+        <input id="signupEmail" placeholder="Email">
+        <input id="signupPassword" type="password" placeholder="Password">
+        <button onclick="signup()">Signup</button>
+    </div>
+
+    <div class="card">
+        <h2>Login</h2>
+        <input id="loginEmail" placeholder="Email">
+        <input id="loginPassword" type="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+    </div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+async function signup() {
+    const res = await fetch(API + "/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name: document.getElementById("signupName").value,
+            email: document.getElementById("signupEmail").value,
+            password: document.getElementById("signupPassword").value
+        })
+    });
+
+    const data = await res.json();
+    alert("Signup success!");
+}
+
+async function login() {
+    const res = await fetch(API + "/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            email: document.getElementById("loginEmail").value,
+            password: document.getElementById("loginPassword").value
+        })
+    });
+
+    const data = await res.json();
+
+    if (data.access_token) {
+        localStorage.setItem("token", data.access_token);
+        window.location.href = "dashboard.html";
+    } else {
+        alert("Login failed");
+    }
+}
+</script>
+
+</body>
+</html>
