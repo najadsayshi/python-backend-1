@@ -23,6 +23,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#for render -deployment
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+@app.get("/")
+async def root():
+    return FileResponse("frontend/index.html")
+
 @app.on_event("startup")
 def on_startup():
     SQLModel.metadata.create_all(engine)
@@ -34,9 +42,9 @@ def create_session():
         yield session
 
 
-@app.get("/")
-async def root():
-    return {"message": "Hello world"}
+# @app.get("/")
+# async def root():
+#     return {"message": "Hello world"}
 
 
 @app.post("/signup", response_model=UserRead)
