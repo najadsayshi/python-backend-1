@@ -12,9 +12,7 @@ app = FastAPI()
 from fastapi.middleware.cors import CORSMiddleware
 origins = [
 
-     
-    "http://localhost:8001",
-    "http://127.0.0.1:8001",
+     '*'
  ]
 
 app.add_middleware(
@@ -104,7 +102,7 @@ def profile(
 
 # getting user id whenever we want using jwt token
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security),
-                     db: Session = Depends(create_session)):
+                    db: Session = Depends(create_session)):
     
     token = credentials.credentials
     
