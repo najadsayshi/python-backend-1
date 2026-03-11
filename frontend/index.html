@@ -56,7 +56,7 @@ async function login() {
 
     if (data.access_token) {
         localStorage.setItem("token", data.access_token);
-        window.location.href = "dashboard.html";
+        window.location.href = "/static/dashboard.html";
     } else {
         alert("Login failed");
     }
