@@ -1,31 +1,27 @@
-from jose import jwt , JWTError
+from jose import jwt, JWTError
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
+
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM  = "HS256"
+ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 def create_token(user_id, name):
-
-    expire = datetime.utcnow() + timedelta(minutes = ACCESS_TOKEN_EXPIRE_MINUTES)
-
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {
-        "sub" : str(user_id),
-        "name" : str(name),
-        "exp" : expire
+        "sub": str(user_id),
+        "name": str(name),
+        "exp": expire
     }
-
-    token = jwt.encode(payload, SECRET_KEY, ALGORITHM)
-
+    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return token
-    
 
-def verify_token(token : str):
+def verify_token(token: str):
     try:
-        payload = jwt.decode(token, SECRET_KEY , algorithms = [ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except JWTError:
         return None
